@@ -24,7 +24,7 @@ public class SignupDto {
                 .email(email)
                 .password(password)
                 .username(username)
-                .role(ROLE_GUEST)
+                .role(ROLE_USER)
                 .build();
     }
 }

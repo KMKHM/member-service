@@ -55,13 +55,15 @@ public class MemberServiceImpl implements MemberService {
     public void logout(String refreshToken, String accessToken) {
         String email = tokenProvider.parseClaims(accessToken).getSubject();
         log.info(email);
-        String redisRefreshToken = redisService.getValues(refreshToken);
+        String redisRefreshToken = redisService.getValues(email);
 
         if (redisService.checkExistsValue(redisRefreshToken)) {
             redisService.deleteValues(email);
             log.info("redis");
             long accessTokenExpirationMillis = tokenProvider.getAccessTokenExpirationMillis();
             redisService.setValues(accessToken, "logout", Duration.ofMillis(accessTokenExpirationMillis));
+        } else {
+            log.info("null");
         }
     }
 

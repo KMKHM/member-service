@@ -3,7 +3,9 @@ package com.lucid.userservice.config.security;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 
+import com.lucid.userservice.config.jwt.JwtFilter;
 import com.lucid.userservice.config.jwt.TokenProvider;
+import com.lucid.userservice.config.redis.RedisService;
 import com.lucid.userservice.service.MemberService;
 import com.lucid.userservice.service.MemberServiceImpl;
 import com.lucid.userservice.service.UserDetailService;
@@ -27,6 +29,7 @@ public class SecurityConfig {
 
     private final UserDetailService userDetailService;
     private final TokenProvider tokenProvider;
+    private final RedisService redisService;
 
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -59,9 +62,17 @@ public class SecurityConfig {
         public void configure(HttpSecurity builder) throws Exception {
             AuthenticationManager authenticationManager = builder.getSharedObject(AuthenticationManager.class);
             CustomAuthenticationFilter customAuthenticationFilter =
-                    new CustomAuthenticationFilter(authenticationManager, userDetailService, tokenProvider);
+                    new CustomAuthenticationFilter(authenticationManager, userDetailService,
+                            tokenProvider, redisService);
             customAuthenticationFilter.setFilterProcessesUrl("/login");
-            builder.addFilter(customAuthenticationFilter);
+            customAuthenticationFilter.setAuthenticationSuccessHandler(new LoginSuccessHandler());
+
+            JwtFilter jwtFilter = new JwtFilter(tokenProvider, redisService);
+
+
+
+            builder.addFilter(customAuthenticationFilter)
+                    .addFilterAfter(jwtFilter, CustomAuthenticationFilter.class);
         }
     }
 

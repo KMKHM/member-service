@@ -8,12 +8,14 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.security.Key;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +25,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -36,9 +39,11 @@ public class TokenProvider {
 
     private final Key key;
 
+    @Getter
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpirationMillis;
 
+    @Getter
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpirationMillis;
 
@@ -90,7 +95,7 @@ public class TokenProvider {
     }
 
     public void setRefreshTokenHeader(HttpServletResponse response, String refreshToken) {
-        response.setHeader(REFRESH_HEADER + "-" + AUTHORIZATION_HEADER, refreshToken);
+        response.setHeader(REFRESH_HEADER, refreshToken);
     }
 
     // 토큰 유효성 검사
@@ -138,5 +143,25 @@ public class TokenProvider {
         } catch (ExpiredJwtException e) {
             return e.getClaims();
         }
+    }
+
+    // Request Header에 Access Token 정보를 추출하는 메서드
+    public String resolveAccessToken(HttpServletRequest request) {
+        log.info("JwtTokenProvider.resolveAccessToken excute, request = {}", request.toString());
+        String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    // Request Header에 Refresh Token 정보를 추출하는 메서드
+    public String resolveRefreshToken(HttpServletRequest request) {
+        log.info("JwtTokenProvider.resolveRefreshToken excute, request = {}", request.toString());
+        String bearerToken = request.getHeader(REFRESH_HEADER);
+        if (StringUtils.hasText(bearerToken)) {
+            return bearerToken;
+        }
+        return null;
     }
 }

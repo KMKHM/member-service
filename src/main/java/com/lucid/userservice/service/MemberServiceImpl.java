@@ -1,11 +1,15 @@
 package com.lucid.userservice.service;
 
+import com.lucid.userservice.config.jwt.TokenProvider;
+import com.lucid.userservice.config.redis.RedisService;
 import com.lucid.userservice.config.security.SecurityUtil;
 import com.lucid.userservice.domain.Member;
 import com.lucid.userservice.repository.MemberRepository;
 import com.lucid.userservice.service.request.SignupDto;
 import com.lucid.userservice.service.response.MemberResponse;
 
+import io.jsonwebtoken.Claims;
+import java.time.Duration;
 import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +27,8 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenProvider tokenProvider;
+    private final RedisService redisService;
 
     @Override
     public MemberResponse signup(SignupDto request) {
@@ -44,6 +50,21 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(RuntimeException::new);
         return MemberResponse.of(member);
     }
+
+    @Override
+    public void logout(String refreshToken, String accessToken) {
+        String email = tokenProvider.parseClaims(accessToken).getSubject();
+        log.info(email);
+        String redisRefreshToken = redisService.getValues(refreshToken);
+
+        if (redisService.checkExistsValue(redisRefreshToken)) {
+            redisService.deleteValues(email);
+            log.info("redis");
+            long accessTokenExpirationMillis = tokenProvider.getAccessTokenExpirationMillis();
+            redisService.setValues(accessToken, "logout", Duration.ofMillis(accessTokenExpirationMillis));
+        }
+    }
+
 
     private boolean checkDuplicateEmail(String email) {
         if (memberRepository.findByEmail(email).isPresent()) {

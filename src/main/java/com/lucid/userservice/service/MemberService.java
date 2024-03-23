@@ -7,4 +7,5 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 public interface MemberService {
     MemberResponse signup(SignupDto request);
     MemberResponse info();
+    void logout(String refreshToken, String accessToken);
 }

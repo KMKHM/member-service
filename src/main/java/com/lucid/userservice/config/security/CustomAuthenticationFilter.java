@@ -3,6 +3,7 @@ package com.lucid.userservice.config.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lucid.userservice.config.jwt.TokenDto;
 import com.lucid.userservice.config.jwt.TokenProvider;
+import com.lucid.userservice.config.redis.RedisService;
 import com.lucid.userservice.controller.request.LoginRequest;
 import com.lucid.userservice.service.UserDetailService;
 import jakarta.servlet.FilterChain;
@@ -10,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
     private final AuthenticationManager authenticationManager;
     private final UserDetailService userDetailService;
     private final TokenProvider tokenProvider;
+    private final RedisService redisService;
 
     @SneakyThrows
     @Override
@@ -48,7 +51,6 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
                                             Authentication authResult) throws IOException, ServletException {
         String userName = ((User) authResult.getPrincipal()).getUsername();
-//        UserDetails userDetails = userDetailService.loadUserByUsername(userName);
 
         TokenDto tokenDto = tokenProvider.generateToken(authResult);
         String accessToken = tokenDto.getAccessToken();
@@ -57,9 +59,11 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
         tokenProvider.setAccessTokenHeader(response, accessToken);
         tokenProvider.setRefreshTokenHeader(response, refreshToken);
 
-//        log.info("aa = {}", userDetails.getUsername());
         log.info(SecurityContextHolder.getContext().getAuthentication().getName());
         log.info("userName = {}", userName);
+
+        long refreshTokenExpirationMillis = tokenProvider.getRefreshTokenExpirationMillis();
+        redisService.setValues(userName, refreshToken, Duration.ofMillis(refreshTokenExpirationMillis));
 
     }
 }

@@ -1,6 +1,7 @@
 package com.lucid.userservice.config.jwt;
 
 
+import com.lucid.userservice.config.redis.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,13 +22,15 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private final TokenProvider tokenProvider;
+    private final RedisService redisService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
         String jwt = resolveToken(request);
 
-        if (tokenProvider.validateToken(jwt)) {
+        if (tokenProvider.validateToken(jwt) && isLogout(jwt)) {
             Authentication authentication = tokenProvider.getAuthentication(jwt);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
@@ -42,5 +45,9 @@ public class JwtFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    private boolean isLogout(String accessToken) {
+        return redisService.getValues(accessToken).equals("false");
     }
 }

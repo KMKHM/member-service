@@ -30,6 +30,8 @@ public class SecurityConfig {
     private final UserDetailService userDetailService;
     private final TokenProvider tokenProvider;
     private final RedisService redisService;
+    private final CustomDeniedHandler customDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -43,6 +45,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests((request) -> {
                     request.requestMatchers(antMatcher("/auth")).authenticated();
                 })
+                .exceptionHandling(e -> e.authenticationEntryPoint(customAuthenticationEntryPoint))
+                .exceptionHandling(e -> e.accessDeniedHandler(customDeniedHandler))
                 .csrf((csrf) -> csrf.disable())
                 .formLogin(f -> f.disable())
                 .headers((e) -> e.frameOptions((a) -> a.sameOrigin()))
@@ -66,9 +70,9 @@ public class SecurityConfig {
                             tokenProvider, redisService);
             customAuthenticationFilter.setFilterProcessesUrl("/login");
             customAuthenticationFilter.setAuthenticationSuccessHandler(new LoginSuccessHandler());
+            customAuthenticationFilter.setAuthenticationFailureHandler(new LoginFailureHandler());
 
             JwtFilter jwtFilter = new JwtFilter(tokenProvider, redisService);
-
 
 
             builder.addFilter(customAuthenticationFilter)

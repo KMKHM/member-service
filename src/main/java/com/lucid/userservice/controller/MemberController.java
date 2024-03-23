@@ -64,6 +64,12 @@ public class MemberController {
         String refreshToken = tokenProvider.resolveRefreshToken(request);
         String accessToken = tokenProvider.resolveAccessToken(request);
         memberService.logout(refreshToken, accessToken);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("logout!!");
+        return ResponseEntity.status(HttpStatus.OK).body("logout!!");
+    }
+
+    @PostMapping("/emails/verification-requests")
+    public ResponseEntity sendEmail(@RequestParam("email") String email) {
+        memberService.sendCode(email);
+        return new ResponseEntity(HttpStatus.OK);
     }
 }

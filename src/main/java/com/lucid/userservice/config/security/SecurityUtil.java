@@ -14,7 +14,6 @@ public class SecurityUtil {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        log.info(authentication.getName().toString());
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("인증정보 없음");
         }

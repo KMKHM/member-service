@@ -65,5 +65,6 @@ public class CustomAuthenticationFilter extends UsernamePasswordAuthenticationFi
         long refreshTokenExpirationMillis = tokenProvider.getRefreshTokenExpirationMillis();
         redisService.setValues(userName, refreshToken, Duration.ofMillis(refreshTokenExpirationMillis));
 
+        this.getSuccessHandler().onAuthenticationSuccess(request, response, authResult);
     }
 }

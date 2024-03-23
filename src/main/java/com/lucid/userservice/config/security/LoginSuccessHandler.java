@@ -19,9 +19,9 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
         List<GrantedAuthority> authorities = (List<GrantedAuthority>) authentication.getAuthorities();
-        log.info("# Authenticated successfully !");
-        log.info("# Id: {}", authentication.getName());
-        log.info("# roles: {}", authorities.toString());
-//        log.info("aa = {}", SecurityContextHolder.getContext().getAuthentication().getName());
+        log.info("Authenticated successfully");
+        log.info("Email: {}", authentication.getName());
+        log.info("Authority: {}", authorities.toString());
+
     }
 }

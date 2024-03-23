@@ -8,4 +8,5 @@ public interface MemberService {
     MemberResponse signup(SignupDto request);
     MemberResponse info();
     void logout(String refreshToken, String accessToken);
+    void sendCode(String email);
 }

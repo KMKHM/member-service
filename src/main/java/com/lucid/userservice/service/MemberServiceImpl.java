@@ -1,6 +1,7 @@
 package com.lucid.userservice.service;
 
 import com.lucid.userservice.config.jwt.TokenProvider;
+import com.lucid.userservice.config.mail.MailService;
 import com.lucid.userservice.config.redis.RedisService;
 import com.lucid.userservice.config.security.SecurityUtil;
 import com.lucid.userservice.domain.Member;
@@ -11,10 +12,12 @@ import com.lucid.userservice.service.response.MemberResponse;
 import io.jsonwebtoken.Claims;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Random;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,18 @@ public class MemberServiceImpl implements MemberService {
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private final RedisService redisService;
+    private final MailService mailService;
+
+    @Value("${mail.expiration}")
+    private long authCodeExpirationMills;
+
+    @Value("${mail.length}")
+    private int length;
+
+    @Value("${mail.chars}")
+    private String characters;
+
+    private static final String AUTH_CODE_PREFIX = "AuthCode ";
 
     @Override
     public MemberResponse signup(SignupDto request) {
@@ -45,7 +60,6 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public MemberResponse info() {
-        log.info(SecurityUtil.getCurrentMemberEmail());
         Member member = memberRepository.findByEmail(SecurityUtil.getCurrentMemberEmail())
                 .orElseThrow(RuntimeException::new);
         return MemberResponse.of(member);
@@ -65,6 +79,29 @@ public class MemberServiceImpl implements MemberService {
         } else {
             log.info("null");
         }
+    }
+
+    @Override
+    public void sendCode(String email) {
+        String title = "이메일 인증 번호";
+        String authCode = createCode();
+
+        mailService.sendEmail(email, title, authCode);
+
+        redisService.setValues(AUTH_CODE_PREFIX + email, authCode, Duration.ofMillis(authCodeExpirationMills));
+    }
+
+    // 인증번호 생성로직
+    private String createCode() {
+        StringBuilder sb = new StringBuilder(length);
+        Random random = new Random();
+
+        for (int i = 0; i < length; i++) {
+            int index = random.nextInt(characters.length());
+            sb.append(characters.charAt(index));
+        }
+
+        return sb.toString();
     }
 
 

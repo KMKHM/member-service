@@ -4,6 +4,8 @@ import java.util.Map;
 
 public class KakaoOAuth2UserInfo extends OAuth2UserInfo {
 
+    // 카카오 로그인의 경우, 이메일을 얻으려면 애플리케이션 심사과정을 거쳐야 함.
+
     public KakaoOAuth2UserInfo(Map<String, Object> attributes) {
         super(attributes);
     }
@@ -27,7 +29,7 @@ public class KakaoOAuth2UserInfo extends OAuth2UserInfo {
             return null;
         }
 
-        return (String) profile.get("email");
+        return (String) profile.get("nickname");
     }
 
 }

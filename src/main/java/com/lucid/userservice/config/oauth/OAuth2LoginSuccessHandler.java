@@ -25,7 +25,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final TokenProvider tokenProvider;
-    private final MemberRepository memberRepository;
     private final RedisService redisService;
 
     @Override
@@ -34,19 +33,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         try {
             CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
+            log.info(oAuth2User.getEmail());
+            log.info(oAuth2User.getName().toString());
 
-            Member member = memberRepository.findBySocialId(
-                            ((CustomOAuth2User) authentication.getPrincipal()).getName().toString());
-
-            log.info(member.getEmail());
-
-            // 사용자 아이디
-            String email = String.valueOf(member.getEmail());
 
             // 사용자 권한
             String authorities = oAuth2User.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
+            log.info(authorities);
 
             // User의 Role이 GUEST일 경우 처음 요청한 회원이므로 회원가입 페이지로 리다이렉트
             if (oAuth2User.getRole() == Role.ROLE_GUEST) {
@@ -54,21 +49,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 log.info("AA");
             } else {
                 // 이미 가입된 회원의 경우 바로 토큰 발급해주면 된다.
-                TokenDto tokenDto = tokenProvider.generateTokenDtoOAuth(email, authorities);
+                TokenDto tokenDto = tokenProvider.generateTokenDtoOAuth(oAuth2User.getEmail(), authorities);
                 tokenProvider.setAccessTokenHeader(response, tokenDto.getAccessToken());
                 tokenProvider.setRefreshTokenHeader(response, tokenDto.getRefreshToken());
 
 
                 long refreshTokenExpirationMillis = tokenProvider.getRefreshTokenExpirationMillis();
-                redisService.setValues(member.getEmail(), tokenDto.getRefreshToken(), Duration.ofMillis(refreshTokenExpirationMillis));
-                // 리프레시 토큰의 경우 DB에 저장
-//                RefreshToken refreshToken = RefreshToken.builder()
-//                        .key(authentication.getName())
-//                        .value(tokenDto.getRefreshToken())
-//                        .build();
-//
-//                refreshTokenRepository.save(refreshToken);
-//                tokenProvider.sendAccessAndRefreshToken(response, tokenDto.getAccessToken(), tokenDto.getRefreshToken());
+                redisService.setValues(oAuth2User.getEmail(), tokenDto.getRefreshToken(), Duration.ofMillis(refreshTokenExpirationMillis));
             }
         } catch (Exception e) {
             throw e;

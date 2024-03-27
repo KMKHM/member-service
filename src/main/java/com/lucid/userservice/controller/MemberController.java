@@ -42,18 +42,6 @@ public class MemberController {
         return ResponseEntity.status(HttpStatus.CREATED).body(memberService.signup(request.toServiceDto()));
     }
 
-    @GetMapping("/auth")
-    public String auth(@RequestBody LoginRequest loginRequest) {
-        log.info("email = {}", SecurityUtil.getCurrentMemberEmail());
-        return "ok";
-    }
-
-    @GetMapping("/login2")
-    public String login(@RequestBody LoginRequest loginRequest) {
-        log.info("email = {}", SecurityUtil.getCurrentMemberEmail());
-        return "ok";
-    }
-
     @GetMapping("/info")
     public ResponseEntity<MemberResponse> info() {
         return ResponseEntity.status(HttpStatus.OK).body(memberService.info());

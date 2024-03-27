@@ -23,7 +23,8 @@ public class JwtFilter extends OncePerRequestFilter {
     private final TokenProvider tokenProvider;
     private final RedisService redisService;
 
-    private static final List<String> EXCLUDE_URL = List.of("/", "/home", "/sign-up");
+    private static final List<String> EXCLUDE_URL = List.of("/", "/home", "/sign-up",
+            "/login/oauth/code/google", "/**");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

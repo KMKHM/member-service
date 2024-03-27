@@ -164,4 +164,37 @@ public class TokenProvider {
         }
         return null;
     }
+
+
+    //////////////
+
+    public TokenDto generateTokenDtoOAuth(String email, String authorities) {
+
+        long now = (new Date()).getTime();
+
+        Date accessTokenExpiresIn = new Date(now + accessTokenExpirationMillis);
+        Date refreshTokenExpiresIn = new Date(now + refreshTokenExpirationMillis);
+
+        // Access Token 생성
+        String accessToken = Jwts.builder()
+                .setSubject(email)
+                .claim(AUTHORITIES_KEY, authorities)
+                .setExpiration(accessTokenExpiresIn)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+
+        // Refresh Token 생성
+        String refreshToken = Jwts.builder()
+                .setSubject(email)
+                .setExpiration(refreshTokenExpiresIn)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+
+        return TokenDto.builder()
+                .grantType(BEARER_TYPE)
+                .accessToken(accessToken)
+                .accessTokenExpiresIn(accessTokenExpiresIn.getTime())
+                .refreshToken(refreshToken)
+                .build();
+    }
 }

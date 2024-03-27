@@ -5,6 +5,9 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
 
 import com.lucid.userservice.config.jwt.JwtFilter;
 import com.lucid.userservice.config.jwt.TokenProvider;
+import com.lucid.userservice.config.oauth.CustomOAuth2MemberService;
+import com.lucid.userservice.config.oauth.OAuth2LoginFailureHandler;
+import com.lucid.userservice.config.oauth.OAuth2LoginSuccessHandler;
 import com.lucid.userservice.config.redis.RedisService;
 import com.lucid.userservice.service.MemberService;
 import com.lucid.userservice.service.MemberServiceImpl;
@@ -32,6 +35,9 @@ public class SecurityConfig {
     private final RedisService redisService;
     private final CustomDeniedHandler customDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomOAuth2MemberService oAuth2MemberService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -39,17 +45,23 @@ public class SecurityConfig {
         http
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf((csrf) -> csrf.disable())
-                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/sign-up")).permitAll())
-                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/home")).permitAll())
-                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/**")).permitAll())
-                .authorizeHttpRequests((request) -> {
-                    request.requestMatchers(antMatcher("/auth")).authenticated();
-                })
+//                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/sign-up")).permitAll())
+//                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/home")).permitAll())
+//                .authorizeHttpRequests((requests) -> requests.requestMatchers(antMatcher("/**")).permitAll())
+//                .authorizeHttpRequests((request) -> {
+//                    request.requestMatchers(antMatcher("/auth")).authenticated();
+//                })
+                .authorizeHttpRequests((request) -> request.anyRequest().permitAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .exceptionHandling(e -> e.accessDeniedHandler(customDeniedHandler))
                 .csrf((csrf) -> csrf.disable())
                 .formLogin(f -> f.disable())
+                .httpBasic(h -> h.disable())
                 .headers((e) -> e.frameOptions((a) -> a.sameOrigin()))
+                .oauth2Login((oauth2) -> oauth2.userInfoEndpoint(
+                        userInfoEndpointConfig -> userInfoEndpointConfig.userService(oAuth2MemberService))
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler))
                 .with(new CustomFilterConfigurer(), Customizer.withDefaults());
 
         return http.build();

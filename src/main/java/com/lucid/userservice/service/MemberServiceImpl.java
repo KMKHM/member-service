@@ -1,5 +1,7 @@
 package com.lucid.userservice.service;
 
+import static com.lucid.userservice.domain.Role.ROLE_USER;
+
 import com.lucid.userservice.config.jwt.TokenProvider;
 import com.lucid.userservice.config.mail.MailService;
 import com.lucid.userservice.config.redis.RedisService;
@@ -7,8 +9,10 @@ import com.lucid.userservice.config.security.SecurityUtil;
 import com.lucid.userservice.domain.Member;
 import com.lucid.userservice.repository.MemberRepository;
 import com.lucid.userservice.service.request.SignupDto;
+import com.lucid.userservice.service.response.EmailVerificationResponse;
 import com.lucid.userservice.service.response.MemberResponse;
 
+import com.lucid.userservice.util.ApiResponse;
 import io.jsonwebtoken.Claims;
 import java.time.Duration;
 import java.util.Collections;
@@ -18,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,8 +65,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public MemberResponse info() {
-        Member member = memberRepository.findByEmail(SecurityUtil.getCurrentMemberEmail())
-                .orElseThrow(RuntimeException::new);
+        Member member = memberRepository.findByEmail(SecurityUtil.getCurrentMemberEmail());
         return MemberResponse.of(member);
     }
 
@@ -91,6 +95,22 @@ public class MemberServiceImpl implements MemberService {
         redisService.setValues(AUTH_CODE_PREFIX + email, authCode, Duration.ofMillis(authCodeExpirationMills));
     }
 
+    // 인증번호 검증
+    @Transactional
+    @Override
+    public ApiResponse<EmailVerificationResponse> verifyCode(String email, String code) {
+        if (checkCode(email, code)) {
+            Member findMember = memberRepository.findByEmail(email);
+            findMember.updateRole(ROLE_USER);
+            return ApiResponse.of(HttpStatus.OK, "이메일 인증 성공", EmailVerificationResponse.of(true));
+        }
+        return ApiResponse.of(HttpStatus.FORBIDDEN, "이메일 인증 실패", EmailVerificationResponse.of(false));
+    }
+
+    private boolean checkCode(String email, String code) {
+        return code.equals(redisService.getValues(AUTH_CODE_PREFIX + email));
+    }
+
     // 인증번호 생성로직
     private String createCode() {
         StringBuilder sb = new StringBuilder(length);
@@ -106,7 +126,7 @@ public class MemberServiceImpl implements MemberService {
 
 
     private boolean checkDuplicateEmail(String email) {
-        if (memberRepository.findByEmail(email).isPresent()) {
+        if (memberRepository.findByEmail(email) != null) {
             return false;
         }
         return true;
